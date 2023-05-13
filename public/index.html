@@ -1,0 +1,84 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HTML Editor</title>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <style>
+        #editor {
+            height: 500px;
+        }
+    </style>
+</head>
+<body>
+    <select id="fileSelect"></select>
+    <div id="editor"></div>
+    <button id="saveBtn">Save</button>
+
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script>
+        const toolbarOptions = [
+            ['bold', 'italic', 'underline', 'strike'], // toggled buttons
+            ['blockquote', 'code-block'],
+            [{ 'header': 1 }, { 'header': 2 }], // custom button values
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'script': 'sub'}, { 'script': 'super' }], // superscript/subscript
+            [{ 'indent': '-1'}, { 'indent': '+1' }], // outdent/indent
+            [{ 'direction': 'rtl' }], // text direction
+            [{ 'size': ['small', false, 'large', 'huge'] }], // custom dropdown
+            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+            [{ 'color': [] }, { 'background': [] }], // dropdown with defaults from theme
+            [{ 'font': [] }],
+            [{ 'align': [] }],
+            ['link', 'image', 'video'],
+            ['clean'] // remove formatting button
+        ];
+
+        const quill = new Quill('#editor', {
+            modules: {
+                toolbar: toolbarOptions,
+            },
+            theme: 'snow'
+        });
+
+        const fileSelect = document.getElementById('fileSelect');
+
+        fetch('/files')
+            .then(response => response.json())
+            .then(files => {
+                files.forEach(file => {
+                    const option = document.createElement('option');
+                    option.value = file;
+                    option.textContent = file;
+                    fileSelect.appendChild(option);
+                });
+            });
+
+        fileSelect.addEventListener('change', function() {
+            const filename = this.value;
+            fetch(`/files/${encodeURIComponent(filename)}`)
+                .then(response => response.text())
+                .then(data => {
+                    quill.clipboard.dangerouslyPasteHTML(data);
+                });
+        });
+
+        document.getElementById('saveBtn').addEventListener('click', function() {
+            const html = quill.root.innerHTML;
+            const filename = fileSelect.value;
+            fetch(`/files/${encodeURIComponent(filename)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({content: html}),
+            })
+            .then(response => response.text())
+            .then(data => {
+                alert(data);
+            });
+        });
+    </script>
+    
+</body>
+</html>
